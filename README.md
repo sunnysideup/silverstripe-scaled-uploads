@@ -1,28 +1,53 @@
 # Automatically scale down uploaded images for Silverstripe
 
-An extension to automatically scale down all new uploaded images in Silverstripe and (optionally) compress
-all uploaded images (resample) and converts them to webp. If the uploaded image is larger than a pre-configured size, it will be scaled down. The extension no longer supports auto-rotation of JPG images eg: portrait images taken with digital cameras or cellphones. However, this should be done around here:  vendor/silverstripe/assets/src/InterventionBackend.php:278
+Reduce your footprint!
 
-It also supports custom folder configurations to allow for different settings based on the folder they are uploaded into.
+For all newly uploaded images in Silverstripe, this extension will automatically scale down (reduce width / height), compress, and convert them to webp to ensure your images are as light as possible, without significantly affecting quality. 
 
 ## Requirements
 
 - Silverstripe ^4.0 || ^5.0
-- EXIF support for auto-rotation
 
 For Silverstripe 3, please refer to the [Silverstripe3 branch](https://github.com/axllent/silverstripe-scaled-uploads/tree/silverstripe3).
 
 ## Usage
 
-Simply install the module. All images are (by default) scaled to a maximum size of 960px (width) X 800px (height),
-and auto-rotation (based on EXIF data) for JPG images is by default **on**.
+Simply install the module and then set your own limits. For setting your limtis please refer to the [Configuration.md](docs/en/Configuration.md) file.
 
-## Configuration
+To use the functionality somewhere else, you can do something like this:
+```php
 
-Please refer to the [Configuration.md](docs/en/Configuration.md) file for options.
+use Axllent\ScaledUploads\Api\Resizer;
+use SilverStripe\Assets\Image;
+
+$runner = Resizer::create()
+    ->setMaxHeight(100)
+    ->setMaxFileSizeInMb(0.6)
+    ->setDryRun(true)
+    ->setVerbose(true);
+
+$imagesIds = Image::get()->sort(['ID' => 'DESC'])->columnUnique();
+foreach ($imagesIds as $imageID) {
+    $image = Image::get()->byID($imageID);
+    if ($image->exists()) {
+        $runner->runFromDbFile($image);
+    }
+}
+
+```
 
 ## Installation
 
 ```shell
 composer require axllent/silverstripe-scaled-uploads
 ```
+
+## Batch process existing images
+
+If you would like to batch process existing images then you can use the [Resize All Images Module](https://github.com/sunnysideup/silverstripe-resize-all-images/) that extends this module. 
+
+## Rotation
+
+This extension no longer supports auto-rotation of JPG images (i.e. portrait images taken with digital cameras or cellphones). 
+However, this should now also be part of Silverstripe core functionality - see  `vendor/silverstripe/assets/src/InterventionBackend.php:278` (not sure if or how this works). 
+
