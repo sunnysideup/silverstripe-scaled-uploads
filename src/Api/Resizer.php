@@ -490,7 +490,7 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
-        $isPublished = $image->isPublished();
+        $isPublished = $image->isPublished()  && ! $image->isModifiedOnDraft();
         $image->write();
         if ($isPublished) {
             $image->publishSingle();
