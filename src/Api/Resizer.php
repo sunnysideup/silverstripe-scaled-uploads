@@ -6,9 +6,12 @@ use SilverStripe\Assets\Flysystem\FlysystemAssetStore;
 use SilverStripe\Assets\Image;
 use SilverStripe\Assets\Image_Backend;
 use SilverStripe\Assets\Storage\DBFile;
+use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
+use Exception;
+use SilverStripe\Control\Controller;
 
 class Resizer
 {
@@ -68,6 +71,13 @@ class Resizer
     private static bool $use_webp = true;
 
     /**
+     * Replace images with WebP format
+     *
+     * @config
+     */
+    private static bool $keep_original = true;
+
+    /**
      * Force resampling of images even if not stricly necessary
      *
      * @config
@@ -83,6 +93,7 @@ class Resizer
     protected float|null $maxSizeInMb;
     protected float $quality;
     protected bool $useWebp;
+    protected bool $keepOriginal;
     protected bool|null $forceResampling;
     protected Image_Backend $transformed;
     protected $file;
@@ -159,6 +170,12 @@ class Resizer
         return $this;
     }
 
+    public function setKeepOriginal(?bool $keepOriginal): static
+    {
+        $this->keepOriginal = $keepOriginal;
+        return $this;
+    }
+
     public function setQualityReductionIncrement(?float $qualityReductionIncrement = 0.1): static
     {
         $this->qualityReductionIncrement = $qualityReductionIncrement;
@@ -176,6 +193,7 @@ class Resizer
         $this->maxSizeInMb     = $this->config()->get('max_size_in_mb');
         $this->quality         = $this->config()->get('default_quality');
         $this->useWebp         = $this->config()->get('use_webp');
+        $this->keepOriginal    = $this->config()->get('keep_original');
         $this->forceResampling = $this->config()->get('force_resampling');
     }
 
@@ -283,7 +301,7 @@ class Resizer
      */
     public function applyCustomFolders(string $filePath, ?array $moreCustomValues = []): void
     {
-        $folder = trim(strval(dirname($filePath)), '/');
+        $folder = trim(strval(dirname($filePath)), DIRECTORY_SEPARATOR);
         // Check if original values need to be restored
         if (!empty($this->originalValues)) {
             foreach ($this->originalValues as $key => $value) {
@@ -404,6 +422,45 @@ class Resizer
                 return false;
             }
             $modified = true;
+            if ($this->keepOriginal) {
+                $folder = Controller::join_links(
+                    Director::baseFolder(),
+                    '.original_assets/',
+                    $this->file->Parent()?->getFilename()
+                );
+                if (! file_exists($folder)) {
+                    mkdir($folder, 0777, true);
+                }
+                if (! file_exists($folder)) {
+                    user_error('Could not create folder: ' . $folder, E_USER_WARNING);
+                    return false;
+                }
+                $newName = $folder. DIRECTORY_SEPARATOR. $this->file->Name;
+                $x = 2;
+                while (file_exists($newName)) {
+                    $pathInfo = pathinfo($newName);
+                    // Create the new filename by inserting '.2' before the extension
+                    $newName = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '-v'.$x.'.'. $pathInfo['extension'];
+                    $x++;
+                }
+                if ($this->verbose) {
+                    echo 'Copying original file to ' . $folder. DIRECTORY_SEPARATOR. $this->file->Name . PHP_EOL;
+                }
+                $string = $this->file->getString();
+                file_put_contents($newName, $string);
+                if (!file_exists($newName)) {
+                    user_error('Could not copy original file to ' . $folder. DIRECTORY_SEPARATOR. $this->file->Name, E_USER_WARNING);
+                    return false;
+                }
+                try {
+                } catch (Exception $e) {
+                    if ($this->verbose) {
+                        echo 'ERROR: Cannot copy original file: ' . $e->getMessage() . PHP_EOL;
+                        echo 'to ' . $folder. DIRECTORY_SEPARATOR. $this->file->Name . PHP_EOL;
+                        return false;
+                    }
+                }
+            }
             /**
              * @var  DBFile $tmpFile $tmpFile
              */

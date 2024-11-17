@@ -22,7 +22,9 @@ class ScaledUploadsExtension extends Extension
         }
 
         $file = Resizer::create()
-            ->setMaxHeight(100)
+            // ->setUseWebp(false)
+            // ->setKeepOriginal(true)
+            // ->setMaxWidth(100)
             ->runFromDbFile($file);
     }
 
