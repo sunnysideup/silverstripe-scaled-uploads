@@ -6,7 +6,7 @@ For all newly uploaded images in Silverstripe, this extension will automatically
 
 ## history
 
-This module was originally created by [axllent](https://github.com/axllent/silverstripe-scaled-uploads/). We rewrote it to match our needs and it ended up so different now from the original module that our pull request did much sense anymore.
+This module was originally created by [Axllent](https://github.com/axllent/silverstripe-scaled-uploads/). We rewrote it to match our needs and it ended up so different now from the original module that our pull request did much sense anymore.
 
 ## Requirements
 
