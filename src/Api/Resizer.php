@@ -1,6 +1,6 @@
 <?php
 
-namespace Axllent\ScaledUploads\Api;
+namespace Sunnysideup\ScaledUploads\Api;
 
 use SilverStripe\Assets\Flysystem\FlysystemAssetStore;
 use SilverStripe\Assets\Image;

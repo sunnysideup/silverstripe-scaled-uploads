@@ -1,8 +1,8 @@
 {
-    "name": "axllent/silverstripe-scaled-uploads",
-    "description": "Automatically scale down and rotate uploaded images for Silverstripe",
+    "name": "sunnysideup/silverstripe-scaled-uploads",
+    "description": "Automatically scale down and rotate uploaded images for Silverstripe. This module is based on axllent's version. ",
     "type": "silverstripe-vendormodule",
-    "homepage": "https://github.com/axllent/silverstripe-scaled-uploads",
+    "homepage": "https://github.com/sunnysideup/silverstripe-scaled-uploads",
     "keywords": [
         "silverstripe",
         "uploads",
@@ -16,17 +16,21 @@
         {
             "name": "Ralph Slooten",
             "homepage": "http://www.axllent.org/"
+        },
+        {
+            "name": "Nicolaas Thiemen",
+            "homepage": "http://www.sunnysideup.co.nz/"
         }
     ],
     "support": {
-        "issues": "https://github.com/axllent/silverstripe-scaled-uploads/issues"
+        "issues": "https://github.com/sunnysideup/silverstripe-scaled-uploads/issues"
     },
     "require": {
         "silverstripe/framework": "^4.0 || ^5.0"
     },
     "autoload": {
         "psr-4": {
-            "Axllent\\ScaledUploads\\": "src/"
+            "Sunnysideup\\ScaledUploads\\": "src/"
         }
     }
 }

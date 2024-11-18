@@ -1,8 +1,8 @@
 <?php
 
-namespace Axllent\ScaledUploads\Extensions;
+namespace Sunnysideup\ScaledUploads\Extensions;
 
-use Axllent\ScaledUploads\Api\Resizer;
+use Sunnysideup\ScaledUploads\Api\Resizer;
 use SilverStripe\Core\Extension;
 
 class ScaledUploadsExtension extends Extension

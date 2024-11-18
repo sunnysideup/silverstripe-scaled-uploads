@@ -5,7 +5,7 @@ To set your own configuration, simply create a `app/_config/scaled-uploads.yml`.
 For defaults, please refer to the [ScaledUploads.php](/src/Api/Resizer.php) file.
 
 ```yaml
-Axllent\ScaledUploads\Api\Resizer:
+Sunnysideup\ScaledUploads\Api\Resizer:
   max_width: 960            # Maximum width - s
   max_height: 800           # Maximum height - default 800
   max_size_in_mb: 0.5       # The maximum size of the image in MB
@@ -47,7 +47,7 @@ class BannerImage extends Image
 {
     public function onBeforeWrite()
     {
-        Config::modify()->set('Axllent\\ScaledUploads\\Api\\Resizer', 'max_width', 1600);
+        Config::modify()->set('Sunnysideup\\ScaledUploads\\Api\\Resizer', 'max_width', 1600);
         parent::onBeforeWrite();
     }
 }
@@ -59,12 +59,13 @@ class BannerImage extends Image
 If you need to bypass (skip) ScaledUploads for any particular reason, use:
 
 ```php
-Config::modify()->set('Axllent\\ScaledUploads\\Api\\Resizer', 'bypass', true);
+Config::modify()->set('Sunnysideup\\ScaledUploads\\Api\\Resizer', 'bypass', true);
 ```
 
 ## Allowing webp
 
 You may need to add this to your config files:
+
 ```yml
 
 SilverStripe\Assets\File:
