@@ -18,14 +18,26 @@ Sunnysideup\ScaledUploads\Api\Resizer:
     - '/[^a-zA-Z0-9]/'      # supports basic regex
   custom_folders:
     Gallery:                # Custom upload folder and configuration
-      maxWidth: 1600
-      maxHeight: 1200
-      useWebp: false
+      max_width: 1600
+      max_height: 1200
+      use_webp: false
       quality: 55
-      forceResampling: true
-      maxSizeInMb: 0.1
+      force_resampling: true
+      max_size_in_mb: 0.1
     My/Other/Folder:         # Custom upload folder and configuration
       bypass: true
+  custom_relations:
+    MyPage.MyRel:                # Custom upload folder and configuration
+      max_width: 1600
+      max_height: 1200
+      use_webp: false
+      quality: 55
+      force_resampling: true
+      max_size_in_mb: 0.1
+    My\Other\Class.MyImageField:
+      bypass: true
+    My\Other\Class.MyManyManyImages:
+      max_width: 200
 ```
 
 ## Custom Folders
@@ -33,6 +45,10 @@ Sunnysideup\ScaledUploads\Api\Resizer:
 Custom folders will overwrite your default configuration if the folder of the image at hand matches one of the `custom_folders` listed.
 
 **Note**: your configuration folders should not contain a starting or trailing slash.
+
+## Custom Relations
+
+Custom relations will overwrite your default configuration if the relationship of the image at hand matches one of the `custom_relations` listed.
 
 ## Extending Image
 

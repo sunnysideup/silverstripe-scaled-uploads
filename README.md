@@ -12,8 +12,6 @@ This module was originally created by [Axllent](https://github.com/axllent/silve
 
 - Silverstripe ^4.0 || ^5.0
 
-For Silverstripe 3, please refer to the [Silverstripe3 branch](https://github.com/sunnysideup/axllent/silverstripe-scaled-uploads/tree/silverstripe3).
-
 ## Usage
 
 Simply install the module and then set your own limits. For setting your limtis please refer to the [Configuration.md](docs/en/Configuration.md) file.
@@ -51,7 +49,11 @@ composer require sunnysideup/silverstripe-scaled-uploads
 
 If you would like to batch process existing images then you can use the [Resize All Images Module](https://github.com/sunnysideup/silverstripe-resize-all-images/) that extends this module.
 
+## Providing more guidance to the user when uploading images
+
+Use the [Perfect CMS Images Module](https://github.com/sunnysideup/silverstripe-perfect_cms_images) to provide more guidance to the user when uploading images.
+
 ## Rotation
 
 This extension no longer supports auto-rotation of JPG images (i.e. portrait images taken with digital cameras or cellphones).
-However, this should now also be part of Silverstripe core functionality - see  `vendor/silverstripe/assets/src/InterventionBackend.php:278` (not sure if or how this works).
+However, this should now also be part of Silverstripe core functionality if you are using ImageMagick instead of GD - see  `vendor/silverstripe/assets/src/InterventionBackend.php:278` (not sure if or how this works).

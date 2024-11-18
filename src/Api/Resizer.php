@@ -12,6 +12,8 @@ use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
 use Exception;
 use SilverStripe\Control\Controller;
+use SilverStripe\ORM\DataList;
+use SilverStripe\ORM\SS_List;
 
 class Resizer
 {
@@ -34,6 +36,13 @@ class Resizer
      * @var array
      */
     private static array $custom_folders = [];
+
+    /**
+     * names of folders that should be treated differently
+     *
+     * @var array
+     */
+    private static array $custom_relations = [];
 
     /**
      * Maximum width
@@ -88,6 +97,7 @@ class Resizer
     protected bool $bypass;
     protected array $patternsToSkip;
     protected array $customFolders;
+    protected array $customRelations;
     protected int|null $maxWidth;
     protected int|null $maxHeight;
     protected float|null $maxSizeInMb;
@@ -135,9 +145,15 @@ class Resizer
         return $this;
     }
 
-    public function setCustomFolders(array $array): static
+    public function setCustomFolders(array $folders): static
     {
-        $this->customFolders = $array;
+        $this->customFolders = $folders;
+        return $this;
+    }
+
+    public function setCustomRelations(array $relations): static
+    {
+        $this->customRelations = $relations;
         return $this;
     }
 
@@ -188,6 +204,7 @@ class Resizer
         $this->bypass          = $this->config()->get('bypass_all');
         $this->patternsToSkip  = $this->config()->get('patterns_to_skip');
         $this->customFolders   = $this->config()->get('custom_folders');
+        $this->customRelations = $this->config()->get('custom_relations');
         $this->maxWidth        = $this->config()->get('max_width');
         $this->maxHeight       = $this->config()->get('max_height');
         $this->maxSizeInMb     = $this->config()->get('max_size_in_mb');
@@ -225,7 +242,9 @@ class Resizer
             return $this->file;
         }
         // we do this first as it may contain the bypass flag
-        $this->applyCustomFolders($this->filePath);
+        $this->saveOriginalSettings();
+        $this->applyCustomFolders();
+        $this->applyCustomRelations();
 
         if (! $this->canBeConverted($this->filePath, $this->file->getExtension())) {
             if ($this->verbose) {
@@ -294,13 +313,27 @@ class Resizer
         return true;
     }
 
+    protected function saveOriginalSettings()
+    {
+        // Check if original values need to be restored
+        if (!empty($this->originalValues)) {
+            foreach ($this->originalValues as $key => $value) {
+                $this->$key = $value; // Restore original values
+            }
+            $this->originalValues = []; // Clear after restoration
+        }
+
+    }
+
+
     /**
      *
      * Allows you to add custom settings at runtime without changing the config layer
      * @return void
      */
-    public function applyCustomFolders(string $filePath, ?array $moreCustomValues = []): void
+    protected function applyCustomFolders(?array $moreCustomValues = []): void
     {
+        $filePath = $this->filePath;
         $folder = trim(strval(dirname($filePath)), DIRECTORY_SEPARATOR);
         // Check if original values need to be restored
         if (!empty($this->originalValues)) {
@@ -312,14 +345,34 @@ class Resizer
 
         // Apply custom folder settings if available
         if (!empty($this->customFolders[$folder]) && is_array($this->customFolders[$folder])) {
-            $this->applyCustomFoldersInner($this->customFolders[$folder]);
-            $this->applyCustomFoldersInner($moreCustomValues);
+            $this->applyCustomRules($this->customFolders[$folder]);
+            $this->applyCustomRules($moreCustomValues);
         }
     }
 
-    protected function applyCustomFoldersInner(array $toApply)
+    /**
+     *
+     * Allows you to add custom settings at runtime without changing the config layer
+     * @return void
+     */
+    protected function applyCustomRelations(?array $moreCustomValues = []): void
+    {
+        $filePath = $this->filePath;
+        $folder = trim(strval(dirname($filePath)), DIRECTORY_SEPARATOR);
+        $customRelationKey = $this->getCustomRelationsKey();
+        // Apply custom folder settings if available
+        if (!empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
+            $this->applyCustomRules($this->customFolders[$customRelationKey]);
+            $this->applyCustomRules($moreCustomValues);
+        }
+    }
+
+
+    protected function applyCustomRules(array $toApply)
     {
         foreach ($toApply as $key => $val) {
+            //snakeToCamelCase
+            $key = lcfirst(str_replace('_', '', ucwords($key, '_')));
             if (!in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
                 user_error(
                     'Invalid custom folder setting: ' . $key. '.' .
@@ -328,9 +381,7 @@ class Resizer
                 );
             }
             // Store the original value if not already stored
-            if (!isset($this->originalValues[$key])) {
-                $this->originalValues[$key] = $this->$key ?? null;
-            }
+            $this->originalValues[$key] = $this->$key ?? null;
             // Apply the custom value
             $this->$key = $val;
         }
@@ -552,6 +603,69 @@ class Resizer
         if ($isPublished) {
             $image->publishSingle();
         }
+    }
+
+
+    public function getCustomRelationsKey(): ?string
+    {
+        $list = $this->file->findAllRelatedData();
+        $count = $list->count();
+        if ($count > 1) {
+            return null;
+        } else {
+            $item = $list->first();
+            $classes = $this->getRelationsWithSpecialRules();
+            foreach ($classes as $classNameAndFieldKey => $details) {
+                $className = $details['ClassName'] ?? 'ERROR';
+                if ($item instanceof $className) {
+                    $fieldName = $details['FieldOrMethodName'] ?? 'ERROR';
+                    $image = null;
+                    if ($item->hasMethod($fieldName)) {
+                        $image = $item->$fieldName();
+                        if ($image instanceof DataList) {
+                            $image = $image->filter('ID', $this->file->ID);
+                        } elseif ($image instanceof Image) {
+                            // do nothing
+                        } else {
+                            user_error('ERROR: ' . $fieldName . ' is not a valid method or field on ' . $className. ' to get an image.');
+                        }
+                    }
+                    if ($image && $image->exists() && $this->file->ID === $image->ID) {
+                        return $classNameAndFieldKey;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    protected static $classes_with_images;
+
+    public function getRelationsWithSpecialRules(): array
+    {
+        if (!isset(self::$classes_with_images)) {
+            self::$classes_with_images = [];
+            $all = Config::inst()->get(static::class, 'custom_relations');
+            foreach (array_keys($all) as $usedByItem) {
+                $usedByItemArray = explode('.', $usedByItem);
+                $usedByClass = $usedByItemArray[0] ?? '';
+                $usedByFieldOrMethod = $usedByItemArray[1] ?? '';
+                if (!$usedByClass || !class_exists($usedByClass)) {
+                    user_error('ERROR: ' . $usedByClass . ' is not a valid class');
+                    continue;
+                }
+                if (!$usedByFieldOrMethod) {
+                    user_error('ERROR: ' . $usedByClass . ' is not a valid class');
+                    continue;
+                }
+                self::$classes_with_images[$usedByItem] = [
+                    'ClassName' => $usedByClass,
+                    'FieldOrMethodName' => $usedByFieldOrMethod,
+                ];
+            }
+        }
+
+        return self::$classes_with_images;
     }
 
 }
