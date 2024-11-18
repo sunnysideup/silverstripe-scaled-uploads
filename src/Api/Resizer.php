@@ -13,7 +13,6 @@ use SilverStripe\Core\Injector\Injectable;
 use Exception;
 use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\SS_List;
 
 class Resizer
 {
