@@ -11,6 +11,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
 use Exception;
+use ReflectionClass;
 use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DataList;
 
@@ -83,7 +84,7 @@ class Resizer
      *
      * @config
      */
-    private static bool $keep_original = true;
+    private static bool $keep_original = false;
 
     /**
      * Force resampling of images even if not stricly necessary
@@ -111,11 +112,16 @@ class Resizer
     protected string $tmpImageContent;
     protected array $originalValues = [];
     private const CUSTOM_VALUES_ALLOWED = [
+        'bypass',
+        'patternsToSkip',
+        'customFolders',
+        'customRelations',
         'maxWidth',
         'maxHeight',
         'maxSizeInMb',
         'quality',
         'useWebp',
+        'keepOriginal',
         'forceResampling',
     ];
 
@@ -211,6 +217,16 @@ class Resizer
         $this->useWebp         = $this->config()->get('use_webp');
         $this->keepOriginal    = $this->config()->get('keep_original');
         $this->forceResampling = $this->config()->get('force_resampling');
+    }
+
+    public function getAllProperties(): array
+    {
+        $result = [];
+        foreach (self::CUSTOM_VALUES_ALLOWED as $key) {
+            $result[$key] = $this->$key;
+        }
+
+        return $result;
     }
 
     /**
