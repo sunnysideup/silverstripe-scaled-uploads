@@ -5,6 +5,11 @@ namespace Sunnysideup\ScaledUploads\Extensions;
 use Sunnysideup\ScaledUploads\Api\Resizer;
 use SilverStripe\Core\Extension;
 
+/**
+ * Class \Sunnysideup\ScaledUploads\Extensions\ScaledUploadsExtension
+ *
+ * @property Upload|ScaledUploadsExtension $owner
+ */
 class ScaledUploadsExtension extends Extension
 {
     /**
