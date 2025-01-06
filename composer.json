@@ -9,7 +9,10 @@
         "image",
         "upload",
         "scaled",
-        "rotate"
+        "rotate",
+        "files",
+        "assets",
+        "speed"
     ],
     "license": "MIT",
     "authors": [
