@@ -252,7 +252,7 @@ class Resizer
         $this->filePath = $this->file->getFilename();
         if (!$this->filePath) {
             if ($this->verbose) {
-                echo 'ERROR: Cannot convert image with ID ' . $file->ID. ' as Filename is empty.' . PHP_EOL;
+                echo 'ERROR: Cannot convert image with ID ' . $file->ID . ' as Filename is empty.' . PHP_EOL;
             }
             return $this->file;
         }
@@ -293,7 +293,6 @@ class Resizer
                     echo 'ERROR: Cannot load backend for: ' . $this->filePath . PHP_EOL;
                 }
             }
-
         } else {
             if ($this->verbose) {
                 echo 'No need to resize / convert: ' . $this->filePath . PHP_EOL;
@@ -337,7 +336,6 @@ class Resizer
             }
             $this->originalValues = []; // Clear after restoration
         }
-
     }
 
 
@@ -390,8 +388,8 @@ class Resizer
             $key = lcfirst(str_replace('_', '', ucwords($key, '_')));
             if (!in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
                 user_error(
-                    'Invalid custom folder setting: ' . $key. '.' .
-                    'Allowed values are: '.print_r(self::CUSTOM_VALUES_ALLOWED, 1),
+                    'Invalid custom folder setting: ' . $key . '.' .
+                        'Allowed values are: ' . print_r(self::CUSTOM_VALUES_ALLOWED, 1),
                     E_USER_WARNING
                 );
             }
@@ -459,7 +457,7 @@ class Resizer
         // resize to max values
         if ($this->transformed && $this->needsResizing()) {
             if ($this->verbose) {
-                echo 'Resizing ' . ' to ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]').': ' .$this->filePath . PHP_EOL;
+                echo 'Resizing ' . ' to ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]') . ': ' . $this->filePath . PHP_EOL;
             }
             if ($this->dryRun) {
                 return false;
@@ -501,28 +499,28 @@ class Resizer
                     user_error('Could not create folder: ' . $folder, E_USER_WARNING);
                     return false;
                 }
-                $newName = $folder. DIRECTORY_SEPARATOR. $this->file->Name;
+                $newName = $folder . DIRECTORY_SEPARATOR . $this->file->Name;
                 $x = 2;
                 while (file_exists($newName)) {
                     $pathInfo = pathinfo($newName);
                     // Create the new filename by inserting '.2' before the extension
-                    $newName = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '-v'.$x.'.'. $pathInfo['extension'];
+                    $newName = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '-v' . $x . '.' . $pathInfo['extension'];
                     $x++;
                 }
                 if ($this->verbose) {
-                    echo 'Copying original file to ' . $folder. DIRECTORY_SEPARATOR. $this->file->Name . PHP_EOL;
+                    echo 'Copying original file to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name . PHP_EOL;
                 }
                 $string = $this->file->getString();
                 file_put_contents($newName, $string);
                 if (!file_exists($newName)) {
-                    user_error('Could not copy original file to ' . $folder. DIRECTORY_SEPARATOR. $this->file->Name, E_USER_WARNING);
+                    user_error('Could not copy original file to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name, E_USER_WARNING);
                     return false;
                 }
                 try {
                 } catch (Exception $e) {
                     if ($this->verbose) {
                         echo 'ERROR: Cannot copy original file: ' . $e->getMessage() . PHP_EOL;
-                        echo 'to ' . $folder. DIRECTORY_SEPARATOR. $this->file->Name . PHP_EOL;
+                        echo 'to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name . PHP_EOL;
                         return false;
                     }
                 }
@@ -530,14 +528,15 @@ class Resizer
             /**
              * @var  DBFile $tmpFile $tmpFile
              */
-            $tmpFile = $this->file->Convert('webp');
-            $this->deleteOldFile();
-            $this->file->File = $tmpFile;
-            $this->filePath .= '.webp';
-            $this->file->setFromString($tmpFile->getImageBackend()->getImageResource(), $this->filePath);
-            $this->saveAndPublish($this->file);
-            $this->loadBackend();
-
+            if ($this->file->hasMethod('Convert')) {
+                $tmpFile = $this->file->Convert('webp');
+                $this->deleteOldFile();
+                $this->file->File = $tmpFile;
+                $this->filePath .= '.webp';
+                $this->file->setFromString($tmpFile->getImageBackend()->getImageResource(), $this->filePath);
+                $this->saveAndPublish($this->file);
+                $this->loadBackend();
+            }
         }
         return $modified;
     }
@@ -548,7 +547,7 @@ class Resizer
         // Check if WebP is smaller
         if ($this->transformed && $this->needsCompressing()) {
             if ($this->verbose) {
-                echo 'Compressing to '.$this->maxSizeInMb.'MB: ' . $this->filePath . PHP_EOL;
+                echo 'Compressing to ' . $this->maxSizeInMb . 'MB: ' . $this->filePath . PHP_EOL;
             }
             if ($this->dryRun) {
                 return false;
@@ -642,7 +641,7 @@ class Resizer
                         } elseif ($image instanceof Image) {
                             // do nothing
                         } else {
-                            user_error('ERROR: ' . $fieldName . ' is not a valid method or field on ' . $className. ' to get an image.');
+                            user_error('ERROR: ' . $fieldName . ' is not a valid method or field on ' . $className . ' to get an image.');
                         }
                     }
                     if ($image && $image->exists() && $this->file->ID === $image->ID) {
@@ -682,5 +681,4 @@ class Resizer
 
         return self::$classes_with_images;
     }
-
 }
