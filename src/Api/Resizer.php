@@ -416,7 +416,14 @@ class Resizer
         if (!$file) {
             $file = $this->file;
         }
-        $this->transformed = $file->getImageBackend();
+        if (!$file) {
+            return false;
+        }
+        $backend = $file->getImageBackend();
+        if (! $backend) {
+            return false;
+        }
+        $this->transformed = $backend;
 
         // temporary location for image manipulation
         $this->tmpImagePath = TEMP_FOLDER . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
