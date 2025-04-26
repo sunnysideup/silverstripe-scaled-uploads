@@ -109,7 +109,7 @@ class Resizer
     protected $file;
     protected $filePath;
     protected string $tmpImagePath;
-    protected string $tmpImageContent;
+    protected string|null $tmpImageContent;
     protected array $originalValues = [];
     private const CUSTOM_VALUES_ALLOWED = [
         'bypass',
@@ -429,14 +429,16 @@ class Resizer
         $this->tmpImagePath = TEMP_FOLDER . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
 
         $this->tmpImageContent = $this->transformed->getImageResource();
+        if ($this->tmpImageContent) {
 
-        // write to tmp file
-        @file_put_contents($this->tmpImagePath, $this->tmpImageContent);
+            // write to tmp file
+            @file_put_contents($this->tmpImagePath, $this->tmpImageContent);
 
-        $this->transformed->loadFrom($this->tmpImagePath);
+            $this->transformed->loadFrom($this->tmpImagePath);
 
-        if ($this->transformed->getImageResource()) {
-            return true;
+            if ($this->transformed->getImageResource()) {
+                return true;
+            }
         }
         return false;
     }
