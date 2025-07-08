@@ -429,7 +429,7 @@ class Resizer
         $this->tmpImagePath = TEMP_FOLDER . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
 
         $this->tmpImageContent = $this->transformed->getImageResource();
-        if ($this->tmpImageContent) {
+        if ($this->tmpImageContent !== null) {
 
             // write to tmp file
             @file_put_contents($this->tmpImagePath, $this->tmpImageContent);
