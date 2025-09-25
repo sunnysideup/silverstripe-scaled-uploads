@@ -417,10 +417,16 @@ class Resizer
             $file = $this->file;
         }
         if (!$file) {
+            if ($this->verbose) {
+                echo 'ERROR: No file found to load backend.' . PHP_EOL;
+            }
             return false;
         }
         $backend = $file->getImageBackend();
         if (! $backend) {
+            if ($this->verbose) {
+                echo 'ERROR: No backend found for file: ' . $file->getFilename() . PHP_EOL;
+            }
             return false;
         }
         $this->transformed = $backend;
