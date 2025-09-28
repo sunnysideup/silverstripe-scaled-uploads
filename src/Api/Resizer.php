@@ -472,7 +472,7 @@ class Resizer
         // resize to max values
         if ($this->transformed && $this->needsResizing()) {
             if ($this->verbose) {
-                echo 'Resizing ' . ' to ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]') . ': ' . $this->filePath . PHP_EOL;
+                echo 'Resizing to a max of ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]') . ': ' . $this->filePath . PHP_EOL;
             }
             if ($this->dryRun) {
                 return false;
