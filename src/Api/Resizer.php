@@ -77,7 +77,7 @@ class Resizer
      *
      * @config
      */
-    private static float $default_quality = 0.90;
+    private static float $default_quality = 0.87;
 
     /**
      * Replace images with WebP format
