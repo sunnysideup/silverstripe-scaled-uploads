@@ -117,6 +117,7 @@ class Resizer
     protected float|null $maxSizeInMb;
     protected float $quality;
     protected bool $useWebp;
+    protected float $minWebpSize;
     protected float $qualityReductionIncrement;
     protected bool $keepOriginal;
     protected bool|null $forceResampling;
@@ -136,6 +137,7 @@ class Resizer
         'maxSizeInMb',
         'quality',
         'useWebp',
+        'minWebpSize',
         'keepOriginal',
         'forceResampling',
     ];
@@ -207,6 +209,12 @@ class Resizer
         return $this;
     }
 
+    public function setMinWebpSize(float $minWebpSize): static
+    {
+        $this->minWebpSize = $minWebpSize;
+        return $this;
+    }
+
     public function setKeepOriginal(bool $keepOriginal): static
     {
         $this->keepOriginal = $keepOriginal;
@@ -237,6 +245,7 @@ class Resizer
         $this->maxSizeInMb     = $this->config()->get('max_size_in_mb');
         $this->quality         = $this->config()->get('default_quality');
         $this->useWebp         = $this->config()->get('use_webp');
+        $this->minWebpSize     = $this->config()->get('min_size_in_mb_to_bother_about_webp');
         $this->keepOriginal    = $this->config()->get('keep_original');
         $this->forceResampling = $this->config()->get('force_resampling');
     }
@@ -480,13 +489,13 @@ class Resizer
 
     public function needsConvertingToWebp(): bool
     {
-        $minSize = $this->config()->get('min_size_in_mb_to_bother_about_webp') * 1024 * 1024;
+        $minSize = $this->minWebpSize * 1024 * 1024;
         return $this->useWebp && $this->file->getExtension() !== 'webp' && $this->file->getAbsoluteSize() > $minSize;
     }
 
     public function needsCompressing(): bool
     {
-        return ($this->maxSizeInMb && $this->file->getAbsoluteSize() > $this->maxSizeInMb * 1024 * 1024);
+        return ($this->maxSizeInMb && $this->file->getAbsoluteSize() > ($this->maxSizeInMb * 1024 * 1024));
     }
 
     protected function resize(): bool
