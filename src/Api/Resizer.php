@@ -49,7 +49,7 @@ class Resizer
      *
      * @config
      */
-    private static int $max_width = 3600;
+    private static int $max_width = 3840;
 
     /**
      * Maximum height
@@ -59,11 +59,18 @@ class Resizer
     private static int $max_height = 2160; // 0.6y of width
 
     /**
+     * Minimum size of the file in megabytes to bother about converting to webp
+     *
+     * @config
+     */
+    private static float $min_size_in_mb_to_bother_about_webp = 0;
+
+    /**
      * Maximum size of the file in megabytes
      *
      * @config
      */
-    private static float $max_size_in_mb = 0.8;
+    private static float $max_size_in_mb = 2;
 
     /**
      * Default resize quality
@@ -473,7 +480,8 @@ class Resizer
 
     public function needsConvertingToWebp(): bool
     {
-        return $this->useWebp && $this->file->getExtension() !== 'webp';
+        $minSize = $this->config()->get('min_size_in_mb_to_bother_about_webp') * 1024 * 1024;
+        return $this->useWebp && $this->file->getExtension() !== 'webp' && $this->file->getAbsoluteSize() > $minSize;
     }
 
     public function needsCompressing(): bool
