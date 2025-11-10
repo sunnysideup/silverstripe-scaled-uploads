@@ -680,11 +680,11 @@ class Resizer
                 $usedByClass = $usedByItemArray[0] ?? '';
                 $usedByFieldOrMethod = $usedByItemArray[1] ?? '';
                 if (!$usedByClass || !class_exists($usedByClass)) {
-                    user_error('ERROR: ' . $usedByClass . ' is not a valid class');
+                    user_error('ERROR: ' . $usedByClass . ' does not have a valid class');
                     continue;
                 }
                 if (!$usedByFieldOrMethod) {
-                    user_error('ERROR: ' . $usedByClass . ' is not a valid class');
+                    user_error('ERROR: ' . $usedByClass . ' does not have a valid field or method');
                     continue;
                 }
                 self::$classes_with_images[$usedByItem] = [
