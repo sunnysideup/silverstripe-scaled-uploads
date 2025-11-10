@@ -49,7 +49,7 @@ class Resizer
      *
      * @config
      */
-    private static int $max_width = 3600;
+    private static int $max_width = 3840;
 
     /**
      * Maximum height
@@ -59,18 +59,25 @@ class Resizer
     private static int $max_height = 2160; // 0.6y of width
 
     /**
+     * Minimum size of the file in megabytes to bother about converting to webp
+     *
+     * @config
+     */
+    private static float $min_size_in_mb_to_bother_about_webp = 0;
+
+    /**
      * Maximum size of the file in megabytes
      *
      * @config
      */
-    private static float $max_size_in_mb = 0.4;
+    private static float $max_size_in_mb = 2;
 
     /**
      * Default resize quality
      *
      * @config
      */
-    private static float $default_quality = 0.77;
+    private static float $default_quality = 0.87;
 
     /**
      * Replace images with WebP format
@@ -85,6 +92,13 @@ class Resizer
      * @config
      */
     private static bool $keep_original = false;
+
+    /**
+     * When trying to get in range for size, we keep reducing the quality by this step.
+     * Until the image is small enough.
+     * @var float
+     */
+    private static float $quality_reduction_increment = 0.05;
 
     /**
      * Force resampling of images even if not stricly necessary
@@ -103,6 +117,8 @@ class Resizer
     protected float|null $maxSizeInMb;
     protected float $quality;
     protected bool $useWebp;
+    protected float $minWebpSize;
+    protected float $qualityReductionIncrement;
     protected bool $keepOriginal;
     protected bool|null $forceResampling;
     protected Image_Backend $transformed;
@@ -121,18 +137,14 @@ class Resizer
         'maxSizeInMb',
         'quality',
         'useWebp',
+        'minWebpSize',
         'keepOriginal',
         'forceResampling',
     ];
 
-    /**
-     * When trying to get in range for size, we keep reducing the quality by this step.
-     * Until the image is small enough.
-     * @var float
-     */
-    protected float $qualityReductionIncrement = 0.1;
 
-    public function setDryRun(?bool $dryRun = true): static
+
+    public function setDryRun(?bool $dryRun): static
     {
         $this->dryRun = $dryRun;
         return $this;
@@ -141,6 +153,12 @@ class Resizer
     public function setVerbose(?bool $verbose = true): static
     {
         $this->verbose = $verbose;
+        return $this;
+    }
+
+    public function setBypassAll(bool $bypass): static
+    {
+        $this->bypass = $bypass;
         return $this;
     }
 
@@ -162,44 +180,56 @@ class Resizer
         return $this;
     }
 
-    public function setMaxFileSizeInMb(null|float|int $maxSizeInMb = 2): static
+    public function setMaxFileSizeInMb(float|int $maxSizeInMb): static
     {
         $this->maxSizeInMb = $maxSizeInMb;
         return $this;
     }
 
-    public function setMaxWidth(?int $maxWidth = 2800): static
+    public function setMaxWidth(int $maxWidth): static
     {
         $this->maxWidth = $maxWidth;
         return $this;
     }
-    public function setMaxHeight(?int $maxHeight = 1200): static
+    public function setMaxHeight(int $maxHeight): static
     {
         $this->maxHeight = $maxHeight;
         return $this;
     }
 
-    public function setQuality(?float $quality = 0.77): static
+    public function setQuality(float $quality): static
     {
         $this->quality = $quality;
         return $this;
     }
 
-    public function setUseWebp(?bool $useWebp): static
+    public function setUseWebp(bool $useWebp): static
     {
         $this->useWebp = $useWebp;
         return $this;
     }
 
-    public function setKeepOriginal(?bool $keepOriginal): static
+    public function setMinWebpSize(float $minWebpSize): static
+    {
+        $this->minWebpSize = $minWebpSize;
+        return $this;
+    }
+
+    public function setKeepOriginal(bool $keepOriginal): static
     {
         $this->keepOriginal = $keepOriginal;
         return $this;
     }
 
-    public function setQualityReductionIncrement(?float $qualityReductionIncrement = 0.1): static
+    public function setQualityReductionIncrement(float $qualityReductionIncrement): static
     {
         $this->qualityReductionIncrement = $qualityReductionIncrement;
+        return $this;
+    }
+
+    public function setForceResampling(bool $forceResampling): static
+    {
+        $this->forceResampling = $forceResampling;
         return $this;
     }
 
@@ -215,6 +245,7 @@ class Resizer
         $this->maxSizeInMb     = $this->config()->get('max_size_in_mb');
         $this->quality         = $this->config()->get('default_quality');
         $this->useWebp         = $this->config()->get('use_webp');
+        $this->minWebpSize     = $this->config()->get('min_size_in_mb_to_bother_about_webp');
         $this->keepOriginal    = $this->config()->get('keep_original');
         $this->forceResampling = $this->config()->get('force_resampling');
     }
@@ -458,12 +489,13 @@ class Resizer
 
     public function needsConvertingToWebp(): bool
     {
-        return $this->useWebp && $this->file->getExtension() !== 'webp';
+        $minSize = $this->minWebpSize * 1024 * 1024;
+        return $this->useWebp && $this->file->getExtension() !== 'webp' && $this->file->getAbsoluteSize() > $minSize;
     }
 
     public function needsCompressing(): bool
     {
-        return ($this->maxSizeInMb && $this->file->getAbsoluteSize() > $this->maxSizeInMb * 1024 * 1024);
+        return ($this->maxSizeInMb && $this->file->getAbsoluteSize() > ($this->maxSizeInMb * 1024 * 1024));
     }
 
     protected function resize(): bool
@@ -559,8 +591,11 @@ class Resizer
     protected function compress(): bool
     {
         $modified = false;
+        if (empty($this->qualityReductionIncrement)) {
+            $this->qualityReductionIncrement = Config::inst()->get(static::class, 'quality_reduction_increment') ?: 0.05;
+        }
         // Check if WebP is smaller
-        if ($this->transformed && $this->needsCompressing()) {
+        if ($this->transformed && $this->needsCompressing() && $this->qualityReductionIncrement > 0) {
             if ($this->verbose) {
                 echo 'Compressing to ' . $this->maxSizeInMb . 'MB: ' . $this->filePath . PHP_EOL;
             }
