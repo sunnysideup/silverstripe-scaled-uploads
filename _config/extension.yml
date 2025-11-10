@@ -4,3 +4,11 @@ Name: ScaledUploads
 SilverStripe\Assets\Upload:
   extensions:
     - Sunnysideup\ScaledUploads\Extensions\ScaledUploadsExtension
+
+Sunnysideup\ScaledUploads\Api\Resizer:
+  custom_relations:
+    SilverStripe\SiteConfig\SiteConfig.WebAppManifestIcon: # Custom upload folder and configuration
+      use_webp: false
+  custom_folders:
+    web-app-manifest:
+      use_webp: false
