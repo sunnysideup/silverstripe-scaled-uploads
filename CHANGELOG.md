@@ -2,6 +2,10 @@
 
 Notable changes to this project will be documented in this file.
 
+## [2.3.9]
+
+- Fix exif rotation for Silverstripe 4 & 5 (#17)
+
 ## [2.3.8]
 
 - Add option to increase memory limit for processing images on upload
