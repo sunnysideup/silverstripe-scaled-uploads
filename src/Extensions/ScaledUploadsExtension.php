@@ -8,7 +8,7 @@ use SilverStripe\Core\Extension;
 /**
  * Class \Sunnysideup\ScaledUploads\Extensions\ScaledUploadsExtension
  *
- * @property Upload|ScaledUploadsExtension $owner
+ * @property ScaledUploadsExtension $owner
  */
 class ScaledUploadsExtension extends Extension
 {
