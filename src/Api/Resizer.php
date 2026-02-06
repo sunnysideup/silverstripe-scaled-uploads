@@ -26,21 +26,16 @@ class Resizer
     /**
      *
      * file patterns to skip - e.g. '__resampled'
-     * @var array
      */
     private static array $patterns_to_skip = [];
 
     /**
      * names of folders that should be treated differently
-     *
-     * @var array
      */
     private static array $custom_folders = [];
 
     /**
      * names of folders that should be treated differently
-     *
-     * @var array
      */
     private static array $custom_relations = [];
 
@@ -96,7 +91,6 @@ class Resizer
     /**
      * When trying to get in range for size, we keep reducing the quality by this step.
      * Until the image is small enough.
-     * @var float
      */
     private static float $quality_reduction_increment = 0.05;
 
@@ -263,8 +257,6 @@ class Resizer
     /**
      * Scale an image
      *
-     *
-     * @return null
      */
     public function runFromDbFile(Image $file): Image
     {
@@ -298,18 +290,14 @@ class Resizer
             }
             return $this->file;
         }
-        if (
-            $this->forceResampling
-            // || $this->needsRotating()
-            || $this->needsResizing()
-            || $this->needsConvertingToWebp()
-            || $this->needsCompressing()
-            // check if not webp and use webp
-        ) {
+        if ($this->forceResampling
+        // || $this->needsRotating()
+        || $this->needsResizing()
+        || $this->needsConvertingToWebp()
+        || $this->needsCompressing()) {
             if ($this->loadBackend()) {
                 $modified = false;
                 // clone original
-
                 // If rotation allowed & JPG, test to see if orientation needs switching
                 $modified = $this->convertToWebp() ? true : $modified;
                 $modified = $this->resize() ? true : $modified;
@@ -317,17 +305,13 @@ class Resizer
                 if ($modified || $this->forceResampling) {
                     $this->writeToFile();
                 }
-
-                @unlink($this->tmpImagePath); // delete tmp file
-            } else {
-                if ($this->verbose) {
-                    echo 'ERROR: Cannot load backend for: ' . $this->filePath . PHP_EOL;
-                }
+                @unlink($this->tmpImagePath);
+                // delete tmp file
+            } elseif ($this->verbose) {
+                echo 'ERROR: Cannot load backend for: ' . $this->filePath . PHP_EOL;
             }
-        } else {
-            if ($this->verbose) {
-                echo 'No need to resize / convert: ' . $this->filePath . PHP_EOL;
-            }
+        } elseif ($this->verbose) {
+            echo 'No need to resize / convert: ' . $this->filePath . PHP_EOL;
         }
         return $file;
     }
@@ -349,10 +333,8 @@ class Resizer
                 if (preg_match($pattern, $filePath)) {
                     return false;
                 }
-            } else {
-                if (strpos($filePath, $pattern) !== false) {
-                    return false;
-                }
+            } elseif (strpos($filePath, $pattern) !== false) {
+                return false;
             }
         }
         return true;
@@ -361,7 +343,7 @@ class Resizer
     protected function saveOriginalSettings()
     {
         // Check if original values need to be restored
-        if (!empty($this->originalValues)) {
+        if ($this->originalValues !== []) {
             foreach ($this->originalValues as $key => $value) {
                 $this->$key = $value; // Restore original values
             }
@@ -373,14 +355,13 @@ class Resizer
     /**
      *
      * Allows you to add custom settings at runtime without changing the config layer
-     * @return void
      */
     protected function applyCustomFolders(?array $moreCustomValues = []): void
     {
         $filePath = $this->filePath;
         $folder = trim(strval(dirname($filePath)), DIRECTORY_SEPARATOR);
         // Check if original values need to be restored
-        if (!empty($this->originalValues)) {
+        if ($this->originalValues !== []) {
             foreach ($this->originalValues as $key => $value) {
                 $this->$key = $value; // Restore original values
             }
@@ -397,12 +378,10 @@ class Resizer
     /**
      *
      * Allows you to add custom settings at runtime without changing the config layer
-     * @return void
      */
     protected function applyCustomRelations(?array $moreCustomValues = []): void
     {
         $filePath = $this->filePath;
-        $folder = trim(strval(dirname($filePath)), DIRECTORY_SEPARATOR);
         $customRelationKey = $this->getCustomRelationsKey();
         // Apply custom folder settings if available
         if (!empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
@@ -444,7 +423,7 @@ class Resizer
     protected function loadBackend(?Image $file = null): bool
     {
         // reset path, just in case...
-        if (!$file) {
+        if (!$file instanceof \SilverStripe\Assets\Image) {
             $file = $this->file;
         }
         if (!$file) {
@@ -563,14 +542,6 @@ class Resizer
                     user_error('Could not copy original file to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name, E_USER_WARNING);
                     return false;
                 }
-                try {
-                } catch (Exception $e) {
-                    if ($this->verbose) {
-                        echo 'ERROR: Cannot copy original file: ' . $e->getMessage() . PHP_EOL;
-                        echo 'to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name . PHP_EOL;
-                        return false;
-                    }
-                }
             }
             /**
              * @var  DBFile $tmpFile $tmpFile
@@ -651,10 +622,7 @@ class Resizer
     {
         $fileSize = filesize($filePath);
         $maxSize = $this->maxSizeInMb * 1024 * 1024;
-        if ($fileSize > $maxSize) {
-            return true;
-        }
-        return false;
+        return $fileSize > $maxSize;
     }
 
     protected function saveAndPublish(Image $image)
@@ -718,7 +686,7 @@ class Resizer
                     user_error('ERROR: ' . $usedByClass . ' does not have a valid class');
                     continue;
                 }
-                if (!$usedByFieldOrMethod) {
+                if ($usedByFieldOrMethod === '' || $usedByFieldOrMethod === '0') {
                     user_error('ERROR: ' . $usedByClass . ' does not have a valid field or method');
                     continue;
                 }

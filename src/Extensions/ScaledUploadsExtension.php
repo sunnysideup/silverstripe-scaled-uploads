@@ -16,8 +16,6 @@ class ScaledUploadsExtension extends Extension
      * Post data manipulation
      *
      * @param $file File Silverstripe file object
-     *
-     * @return null
      */
     public function onAfterLoadIntoFile($file)
     {
@@ -26,7 +24,7 @@ class ScaledUploadsExtension extends Extension
             return;
         }
 
-        $file = Resizer::create()
+        Resizer::create()
             // ->setUseWebp(false)
             // ->setKeepOriginal(true)
             // ->setMaxWidth(100)
