@@ -6,13 +6,11 @@ use SilverStripe\Assets\Flysystem\FlysystemAssetStore;
 use SilverStripe\Assets\Image;
 use SilverStripe\Assets\Image_Backend;
 use SilverStripe\Assets\Storage\DBFile;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
-use Exception;
-use ReflectionClass;
-use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DataList;
 
 class Resizer
@@ -20,11 +18,9 @@ class Resizer
     use Injectable;
     use Configurable;
 
-
     private static $bypass_all = false;
 
     /**
-     *
      * file patterns to skip - e.g. '__resampled'
      */
     private static array $patterns_to_skip = [];
@@ -100,27 +96,49 @@ class Resizer
      * @config
      */
     private static bool $force_resampling = false;
+
     protected bool $dryRun = false;
+
     protected bool $verbose = false;
+
     protected bool $bypass;
+
     protected array $patternsToSkip;
+
     protected array $customFolders;
+
     protected array $customRelations;
+
     protected int|null $maxWidth;
+
     protected int|null $maxHeight;
+
     protected float|null $maxSizeInMb;
+
     protected float $quality;
+
     protected bool $useWebp;
+
     protected float $minWebpSize;
+
     protected float $qualityReductionIncrement;
+
     protected bool $keepOriginal;
+
     protected bool|null $forceResampling;
+
     protected Image_Backend $transformed;
+
     protected $file;
+
     protected $filePath;
+
     protected string $tmpImagePath;
+
     protected string|null $tmpImageContent;
+
     protected array $originalValues = [];
+
     private const CUSTOM_VALUES_ALLOWED = [
         'bypass',
         'patternsToSkip',
@@ -135,8 +153,6 @@ class Resizer
         'keepOriginal',
         'forceResampling',
     ];
-
-
 
     public function setDryRun(?bool $dryRun): static
     {
@@ -185,6 +201,7 @@ class Resizer
         $this->maxWidth = $maxWidth;
         return $this;
     }
+
     public function setMaxHeight(int $maxHeight): static
     {
         $this->maxHeight = $maxHeight;
@@ -227,20 +244,19 @@ class Resizer
         return $this;
     }
 
-
     public function __construct()
     {
-        $this->bypass          = $this->config()->get('bypass_all');
-        $this->patternsToSkip  = $this->config()->get('patterns_to_skip');
-        $this->customFolders   = $this->config()->get('custom_folders');
+        $this->bypass = $this->config()->get('bypass_all');
+        $this->patternsToSkip = $this->config()->get('patterns_to_skip');
+        $this->customFolders = $this->config()->get('custom_folders');
         $this->customRelations = $this->config()->get('custom_relations');
-        $this->maxWidth        = $this->config()->get('max_width');
-        $this->maxHeight       = $this->config()->get('max_height');
-        $this->maxSizeInMb     = $this->config()->get('max_size_in_mb');
-        $this->quality         = $this->config()->get('default_quality');
-        $this->useWebp         = $this->config()->get('use_webp');
-        $this->minWebpSize     = $this->config()->get('min_size_in_mb_to_bother_about_webp');
-        $this->keepOriginal    = $this->config()->get('keep_original');
+        $this->maxWidth = $this->config()->get('max_width');
+        $this->maxHeight = $this->config()->get('max_height');
+        $this->maxSizeInMb = $this->config()->get('max_size_in_mb');
+        $this->quality = $this->config()->get('default_quality');
+        $this->useWebp = $this->config()->get('use_webp');
+        $this->minWebpSize = $this->config()->get('min_size_in_mb_to_bother_about_webp');
+        $this->keepOriginal = $this->config()->get('keep_original');
         $this->forceResampling = $this->config()->get('force_resampling');
     }
 
@@ -256,7 +272,6 @@ class Resizer
 
     /**
      * Scale an image
-     *
      */
     public function runFromDbFile(Image $file): Image
     {
@@ -273,7 +288,7 @@ class Resizer
             }
         }
         $this->filePath = $this->file->getFilename();
-        if (!$this->filePath) {
+        if (! $this->filePath) {
             if ($this->verbose) {
                 echo 'ERROR: Cannot convert image with ID ' . $file->ID . ' as Filename is empty.' . PHP_EOL;
             }
@@ -316,7 +331,6 @@ class Resizer
         return $file;
     }
 
-
     protected function canBeConverted(string $filePath, string $extension): bool
     {
 
@@ -351,9 +365,7 @@ class Resizer
         }
     }
 
-
     /**
-     *
      * Allows you to add custom settings at runtime without changing the config layer
      */
     protected function applyCustomFolders(?array $moreCustomValues = []): void
@@ -369,34 +381,31 @@ class Resizer
         }
 
         // Apply custom folder settings if available
-        if (!empty($this->customFolders[$folder]) && is_array($this->customFolders[$folder])) {
+        if (! empty($this->customFolders[$folder]) && is_array($this->customFolders[$folder])) {
             $this->applyCustomRules($this->customFolders[$folder]);
             $this->applyCustomRules($moreCustomValues);
         }
     }
 
     /**
-     *
      * Allows you to add custom settings at runtime without changing the config layer
      */
     protected function applyCustomRelations(?array $moreCustomValues = []): void
     {
-        $filePath = $this->filePath;
         $customRelationKey = $this->getCustomRelationsKey();
         // Apply custom folder settings if available
-        if (!empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
+        if (! empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
             $this->applyCustomRules($this->customFolders[$customRelationKey]);
             $this->applyCustomRules($moreCustomValues);
         }
     }
-
 
     protected function applyCustomRules(array $toApply)
     {
         foreach ($toApply as $key => $val) {
             //snakeToCamelCase
             $key = lcfirst(str_replace('_', '', ucwords($key, '_')));
-            if (!in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
+            if (! in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
                 user_error(
                     'Invalid custom folder setting: ' . $key . '.' .
                         'Allowed values are: ' . print_r(self::CUSTOM_VALUES_ALLOWED, 1),
@@ -423,10 +432,10 @@ class Resizer
     protected function loadBackend(?Image $file = null): bool
     {
         // reset path, just in case...
-        if (!$file instanceof \SilverStripe\Assets\Image) {
+        if (! $file instanceof \SilverStripe\Assets\Image) {
             $file = $this->file;
         }
-        if (!$file) {
+        if (! $file) {
             if ($this->verbose) {
                 echo 'ERROR: No file found to load backend.' . PHP_EOL;
             }
@@ -458,7 +467,6 @@ class Resizer
         }
         return false;
     }
-
 
     public function needsResizing(): bool
     {
@@ -538,7 +546,7 @@ class Resizer
                 }
                 $string = $this->file->getString();
                 file_put_contents($newName, $string);
-                if (!file_exists($newName)) {
+                if (! file_exists($newName)) {
                     user_error('Could not copy original file to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name, E_USER_WARNING);
                     return false;
                 }
@@ -590,7 +598,6 @@ class Resizer
         return $modified;
     }
 
-
     protected function writeToFile()
     {
         if ($this->dryRun) {
@@ -613,7 +620,7 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
-        if (!Config::inst()->get(FlysystemAssetStore::class, 'legacy_filenames')) {
+        if (! Config::inst()->get(FlysystemAssetStore::class, 'legacy_filenames')) {
             $this->file->File->deleteFile();
         }
     }
@@ -630,13 +637,12 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
-        $isPublished = $image->isPublished()  && ! $image->isModifiedOnDraft();
+        $isPublished = $image->isPublished() && ! $image->isModifiedOnDraft();
         $image->write();
         if ($isPublished) {
             $image->publishSingle();
         }
     }
-
 
     public function getCustomRelationsKey(): ?string
     {
@@ -675,14 +681,14 @@ class Resizer
 
     public function getRelationsWithSpecialRules(): array
     {
-        if (!isset(self::$classes_with_images)) {
+        if (! isset(self::$classes_with_images)) {
             self::$classes_with_images = [];
             $all = Config::inst()->get(static::class, 'custom_relations');
             foreach (array_keys($all) as $usedByItem) {
                 $usedByItemArray = explode('.', $usedByItem);
                 $usedByClass = $usedByItemArray[0] ?? '';
                 $usedByFieldOrMethod = $usedByItemArray[1] ?? '';
-                if (!$usedByClass || !class_exists($usedByClass)) {
+                if (! $usedByClass || ! class_exists($usedByClass)) {
                     user_error('ERROR: ' . $usedByClass . ' does not have a valid class');
                     continue;
                 }

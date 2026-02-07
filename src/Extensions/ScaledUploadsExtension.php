@@ -2,8 +2,8 @@
 
 namespace Sunnysideup\ScaledUploads\Extensions;
 
-use Sunnysideup\ScaledUploads\Api\Resizer;
 use SilverStripe\Core\Extension;
+use Sunnysideup\ScaledUploads\Api\Resizer;
 
 /**
  * Class \Sunnysideup\ScaledUploads\Extensions\ScaledUploadsExtension
@@ -20,7 +20,7 @@ class ScaledUploadsExtension extends Extension
     public function onAfterLoadIntoFile($file)
     {
         // return if not an image
-        if (!$file->getIsImage()) {
+        if (! $file->getIsImage()) {
             return;
         }
 
@@ -30,6 +30,4 @@ class ScaledUploadsExtension extends Extension
             // ->setMaxWidth(100)
             ->runFromDbFile($file);
     }
-
-
 }
