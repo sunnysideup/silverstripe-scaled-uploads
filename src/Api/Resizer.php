@@ -308,6 +308,7 @@ class Resizer
                 if ($modified || $this->forceResampling) {
                     $this->writeToFile();
                 }
+
                 @unlink($this->tmpImagePath);
                 // delete tmp file
             } elseif ($this->verbose) {
@@ -460,6 +461,9 @@ class Resizer
             // write to tmp file
             @file_put_contents($this->tmpImagePath, $this->tmpImageContent);
 
+            /** @TODO SSU RECTOR UPGRADE TASK - Image_Backend::loadFrom: Changed type of parameter $path in Image_Backend::loadFrom() from dynamic to string
+             * @TODO SSU RECTOR UPGRADE TASK - Image_Backend::loadFrom: Changed return type for method Image_Backend::loadFrom() from dynamic to Image_Backend
+             */
             $this->transformed->loadFrom($this->tmpImagePath);
 
             if ($this->transformed->getImageResource()) {
@@ -602,6 +606,9 @@ class Resizer
                 return false;
             }
 
+            /** @TODO SSU RECTOR UPGRADE TASK - Image_Backend::writeTo: Changed type of parameter $path in Image_Backend::writeTo() from dynamic to string
+             * @TODO SSU RECTOR UPGRADE TASK - Image_Backend::writeTo: Changed return type for method Image_Backend::writeTo() from dynamic to bool
+             */
             $this->transformed->writeTo($this->tmpImagePath);
             $sizeCheck = $this->fileIsTooBig($this->tmpImagePath);
             $step = 1;
@@ -609,7 +616,13 @@ class Resizer
                 // reduce quality
                 $modified = true;
                 unlink($this->tmpImagePath);
+                /** @TODO SSU RECTOR UPGRADE TASK - Image_Backend::setQuality: Changed type of parameter $quality in Image_Backend::setQuality() from dynamic to int
+                 * @TODO SSU RECTOR UPGRADE TASK - Image_Backend::setQuality: Changed return type for method Image_Backend::setQuality() from dynamic to Image_Backend
+                 */
                 $this->transformed->setQuality($this->quality * $step * 100);
+                /** @TODO SSU RECTOR UPGRADE TASK - Image_Backend::writeTo: Changed type of parameter $path in Image_Backend::writeTo() from dynamic to string
+                 * @TODO SSU RECTOR UPGRADE TASK - Image_Backend::writeTo: Changed return type for method Image_Backend::writeTo() from dynamic to bool
+                 */
                 $this->transformed->writeTo($this->tmpImagePath);
                 // new round
                 $sizeCheck = $this->fileIsTooBig($this->tmpImagePath);
@@ -629,6 +642,9 @@ class Resizer
 
         // write to tmp file and then overwrite original
         if ($this->transformed) {
+            /** @TODO SSU RECTOR UPGRADE TASK - Image_Backend::writeTo: Changed type of parameter $path in Image_Backend::writeTo() from dynamic to string
+             * @TODO SSU RECTOR UPGRADE TASK - Image_Backend::writeTo: Changed return type for method Image_Backend::writeTo() from dynamic to bool
+             */
             $this->transformed->writeTo($this->tmpImagePath);
             // if !legacy_filenames then delete original, else rogue copies are left on filesystem
             if (file_exists($this->tmpImagePath)) {
