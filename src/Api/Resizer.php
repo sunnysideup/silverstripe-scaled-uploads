@@ -11,6 +11,7 @@ use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
+use Exception;
 use SilverStripe\ORM\DataList;
 
 class Resizer
@@ -135,7 +136,7 @@ class Resizer
 
     protected string $tmpImagePath;
 
-    protected string|null $tmpImageContent;
+    protected string|null $tmpImageContent = null;
 
     protected array $originalValues = [];
 
@@ -202,7 +203,7 @@ class Resizer
         return $this;
     }
 
-    public function setMaxHeight(int $maxHeight): static
+    public function setMaxHeight(?int $maxHeight = 1200): static
     {
         $this->maxHeight = $maxHeight;
         return $this;
@@ -278,6 +279,7 @@ class Resizer
         if ($this->dryRun) {
             $this->verbose = true;
         }
+
         $this->file = $file;
         if ($this->verbose) {
             echo '---' . PHP_EOL;
@@ -287,13 +289,16 @@ class Resizer
                 echo 'REAL RUN' . PHP_EOL;
             }
         }
+
         $this->filePath = $this->file->getFilename();
         if (! $this->filePath) {
             if ($this->verbose) {
                 echo 'ERROR: Cannot convert image with ID ' . $file->ID . ' as Filename is empty.' . PHP_EOL;
             }
+
             return $this->file;
         }
+
         // we do this first as it may contain the bypass flag
         $this->saveOriginalSettings();
         $this->applyCustomFolders();
@@ -303,8 +308,10 @@ class Resizer
             if ($this->verbose) {
                 echo 'Skipping: ' . $this->filePath . PHP_EOL;
             }
+
             return $this->file;
         }
+
         if ($this->forceResampling
         // || $this->needsRotating()
         || $this->needsResizing()
@@ -320,6 +327,7 @@ class Resizer
                 if ($modified || $this->forceResampling) {
                     $this->writeToFile();
                 }
+
                 @unlink($this->tmpImagePath);
                 // delete tmp file
             } elseif ($this->verbose) {
@@ -328,6 +336,7 @@ class Resizer
         } elseif ($this->verbose) {
             echo 'No need to resize / convert: ' . $this->filePath . PHP_EOL;
         }
+
         return $file;
     }
 
@@ -337,9 +346,11 @@ class Resizer
         if ($this->bypass) {
             return false;
         }
+
         if (! $this->file->getIsImage()) {
             return false;
         }
+
         foreach ($this->patternsToSkip as $pattern) {
             // Detect if the pattern is likely a regex
             if ($this->looksLikeRegex($pattern)) {
@@ -347,10 +358,11 @@ class Resizer
                 if (preg_match($pattern, $filePath)) {
                     return false;
                 }
-            } elseif (strpos($filePath, $pattern) !== false) {
+            } elseif (str_contains($filePath, (string) $pattern)) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -361,6 +373,7 @@ class Resizer
             foreach ($this->originalValues as $key => $value) {
                 $this->$key = $value; // Restore original values
             }
+
             $this->originalValues = []; // Clear after restoration
         }
     }
@@ -371,12 +384,13 @@ class Resizer
     protected function applyCustomFolders(?array $moreCustomValues = []): void
     {
         $filePath = $this->filePath;
-        $folder = trim(strval(dirname($filePath)), DIRECTORY_SEPARATOR);
+        $folder = trim(strval(dirname((string) $filePath)), DIRECTORY_SEPARATOR);
         // Check if original values need to be restored
         if ($this->originalValues !== []) {
             foreach ($this->originalValues as $key => $value) {
                 $this->$key = $value; // Restore original values
             }
+
             $this->originalValues = []; // Clear after restoration
         }
 
@@ -392,6 +406,8 @@ class Resizer
      */
     protected function applyCustomRelations(?array $moreCustomValues = []): void
     {
+        $filePath = $this->filePath;
+        $folder = trim(strval(dirname((string) $filePath)), DIRECTORY_SEPARATOR);
         $customRelationKey = $this->getCustomRelationsKey();
         // Apply custom folder settings if available
         if (! empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
@@ -404,14 +420,15 @@ class Resizer
     {
         foreach ($toApply as $key => $val) {
             //snakeToCamelCase
-            $key = lcfirst(str_replace('_', '', ucwords($key, '_')));
-            if (! in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
+            $key = lcfirst(str_replace('_', '', ucwords((string) $key, '_')));
+            if (!in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
                 user_error(
                     'Invalid custom folder setting: ' . $key . '.' .
                         'Allowed values are: ' . print_r(self::CUSTOM_VALUES_ALLOWED, 1),
                     E_USER_WARNING
                 );
             }
+
             // Store the original value if not already stored
             $this->originalValues[$key] = $this->$key ?? null;
             // Apply the custom value
@@ -432,15 +449,17 @@ class Resizer
     protected function loadBackend(?Image $file = null): bool
     {
         // reset path, just in case...
-        if (! $file instanceof \SilverStripe\Assets\Image) {
+        if (!$file instanceof Image) {
             $file = $this->file;
         }
-        if (! $file) {
+
+        if (!$file) {
             if ($this->verbose) {
                 echo 'ERROR: No file found to load backend.' . PHP_EOL;
             }
             return false;
         }
+
         $backend = $file->getImageBackend();
         if (! $backend) {
             if ($this->verbose) {
@@ -448,6 +467,7 @@ class Resizer
             }
             return false;
         }
+
         $this->transformed = $backend;
 
         // temporary location for image manipulation
@@ -465,6 +485,7 @@ class Resizer
                 return true;
             }
         }
+
         return false;
     }
 
@@ -493,9 +514,11 @@ class Resizer
             if ($this->verbose) {
                 echo 'Resizing to a max of ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]') . ': ' . $this->filePath . PHP_EOL;
             }
+
             if ($this->dryRun) {
                 return false;
             }
+
             $modified = true;
             if ($this->maxWidth && $this->maxHeight) {
                 $this->transformed = $this->transformed->resizeRatio($this->maxWidth, $this->maxHeight);
@@ -505,6 +528,7 @@ class Resizer
                 $this->transformed = $this->transformed->resizeByHeight($this->maxHeight);
             }
         }
+
         return $modified;
     }
 
@@ -516,9 +540,11 @@ class Resizer
             if ($this->verbose) {
                 echo 'Converting to webp: ' . $this->filePath . PHP_EOL;
             }
+
             if ($this->dryRun) {
                 return false;
             }
+
             $modified = true;
             if ($this->keepOriginal) {
                 $folder = Controller::join_links(
@@ -529,10 +555,12 @@ class Resizer
                 if (! file_exists($folder)) {
                     mkdir($folder, 0777, true);
                 }
+
                 if (! file_exists($folder)) {
                     user_error('Could not create folder: ' . $folder, E_USER_WARNING);
                     return false;
                 }
+
                 $newName = $folder . DIRECTORY_SEPARATOR . $this->file->Name;
                 $x = 2;
                 while (file_exists($newName)) {
@@ -541,9 +569,11 @@ class Resizer
                     $newName = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '-v' . $x . '.' . $pathInfo['extension'];
                     $x++;
                 }
+
                 if ($this->verbose) {
                     echo 'Copying original file to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name . PHP_EOL;
                 }
+
                 $string = $this->file->getString();
                 file_put_contents($newName, $string);
                 if (! file_exists($newName)) {
@@ -551,6 +581,7 @@ class Resizer
                     return false;
                 }
             }
+
             /**
              * @var  DBFile $tmpFile $tmpFile
              */
@@ -564,6 +595,7 @@ class Resizer
                 $this->loadBackend();
             }
         }
+
         return $modified;
     }
 
@@ -578,9 +610,11 @@ class Resizer
             if ($this->verbose) {
                 echo 'Compressing to ' . $this->maxSizeInMb . 'MB: ' . $this->filePath . PHP_EOL;
             }
+
             if ($this->dryRun) {
                 return false;
             }
+
             $this->transformed->writeTo($this->tmpImagePath);
             $sizeCheck = $this->fileIsTooBig($this->tmpImagePath);
             $step = 1;
@@ -588,13 +622,15 @@ class Resizer
                 // reduce quality
                 $modified = true;
                 unlink($this->tmpImagePath);
-                $this->transformed->setQuality($this->quality * $step * 100);
+                $quality = (int) round($this->quality * $step * 100);
+                $this->transformed->setQuality($quality);
                 $this->transformed->writeTo($this->tmpImagePath);
                 // new round
                 $sizeCheck = $this->fileIsTooBig($this->tmpImagePath);
                 $step -= $this->qualityReductionIncrement;
             }
         }
+
         return $modified;
     }
 
@@ -603,6 +639,7 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
+
         // write to tmp file and then overwrite original
         if ($this->transformed) {
             $this->transformed->writeTo($this->tmpImagePath);
@@ -620,7 +657,8 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
-        if (! Config::inst()->get(FlysystemAssetStore::class, 'legacy_filenames')) {
+
+        if (!Config::inst()->get(FlysystemAssetStore::class, 'legacy_filenames')) {
             $this->file->File->deleteFile();
         }
     }
@@ -661,19 +699,21 @@ class Resizer
                     if ($item->hasMethod($fieldName)) {
                         $image = $item->$fieldName();
                         if ($image instanceof DataList) {
-                            $image = $image->filter('ID', $this->file->ID);
+                            $image = $image->filter(['ID' => $this->file->ID]);
                         } elseif ($image instanceof Image) {
                             // do nothing
                         } else {
                             user_error('ERROR: ' . $fieldName . ' is not a valid method or field on ' . $className . ' to get an image.');
                         }
                     }
+
                     if ($image && $image->exists() && $this->file->ID === $image->ID) {
                         return $classNameAndFieldKey;
                     }
                 }
             }
         }
+
         return null;
     }
 
@@ -685,7 +725,7 @@ class Resizer
             self::$classes_with_images = [];
             $all = Config::inst()->get(static::class, 'custom_relations');
             foreach (array_keys($all) as $usedByItem) {
-                $usedByItemArray = explode('.', $usedByItem);
+                $usedByItemArray = explode('.', (string) $usedByItem);
                 $usedByClass = $usedByItemArray[0] ?? '';
                 $usedByFieldOrMethod = $usedByItemArray[1] ?? '';
                 if (! $usedByClass || ! class_exists($usedByClass)) {
@@ -696,6 +736,7 @@ class Resizer
                     user_error('ERROR: ' . $usedByClass . ' does not have a valid field or method');
                     continue;
                 }
+
                 self::$classes_with_images[$usedByItem] = [
                     'ClassName' => $usedByClass,
                     'FieldOrMethodName' => $usedByFieldOrMethod,
