@@ -6,12 +6,12 @@ use SilverStripe\Assets\Flysystem\FlysystemAssetStore;
 use SilverStripe\Assets\Image;
 use SilverStripe\Assets\Image_Backend;
 use SilverStripe\Assets\Storage\DBFile;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
 use Exception;
-use SilverStripe\Control\Controller;
 use SilverStripe\ORM\DataList;
 
 class Resizer
@@ -19,27 +19,20 @@ class Resizer
     use Injectable;
     use Configurable;
 
-
     private static $bypass_all = false;
 
     /**
-     *
      * file patterns to skip - e.g. '__resampled'
-     * @var array
      */
     private static array $patterns_to_skip = [];
 
     /**
      * names of folders that should be treated differently
-     *
-     * @var array
      */
     private static array $custom_folders = [];
 
     /**
      * names of folders that should be treated differently
-     *
-     * @var array
      */
     private static array $custom_relations = [];
 
@@ -48,7 +41,7 @@ class Resizer
      *
      * @config
      */
-    private static int $max_width = 3600;
+    private static int $max_width = 3840;
 
     /**
      * Maximum height
@@ -58,18 +51,25 @@ class Resizer
     private static int $max_height = 2160; // 0.6y of width
 
     /**
+     * Minimum size of the file in megabytes to bother about converting to webp
+     *
+     * @config
+     */
+    private static float $min_size_in_mb_to_bother_about_webp = 0;
+
+    /**
      * Maximum size of the file in megabytes
      *
      * @config
      */
-    private static float $max_size_in_mb = 0.4;
+    private static float $max_size_in_mb = 2;
 
     /**
      * Default resize quality
      *
      * @config
      */
-    private static float $default_quality = 0.77;
+    private static float $default_quality = 0.87;
 
     /**
      * Replace images with WebP format
@@ -84,6 +84,12 @@ class Resizer
      * @config
      */
     private static bool $keep_original = false;
+
+    /**
+     * When trying to get in range for size, we keep reducing the quality by this step.
+     * Until the image is small enough.
+     */
+    private static float $quality_reduction_increment = 0.05;
 
     /**
      * Force resampling of images even if not stricly necessary
@@ -114,6 +120,10 @@ class Resizer
 
     protected bool $useWebp;
 
+    protected float $minWebpSize;
+
+    protected float $qualityReductionIncrement;
+
     protected bool $keepOriginal;
 
     protected bool|null $forceResampling;
@@ -130,7 +140,7 @@ class Resizer
 
     protected array $originalValues = [];
 
-    private const array CUSTOM_VALUES_ALLOWED = [
+    private const CUSTOM_VALUES_ALLOWED = [
         'bypass',
         'patternsToSkip',
         'customFolders',
@@ -140,18 +150,12 @@ class Resizer
         'maxSizeInMb',
         'quality',
         'useWebp',
+        'minWebpSize',
         'keepOriginal',
         'forceResampling',
     ];
 
-    /**
-     * When trying to get in range for size, we keep reducing the quality by this step.
-     * Until the image is small enough.
-     * @var float
-     */
-    protected float $qualityReductionIncrement = 0.1;
-
-    public function setDryRun(?bool $dryRun = true): static
+    public function setDryRun(?bool $dryRun): static
     {
         $this->dryRun = $dryRun;
         return $this;
@@ -160,6 +164,12 @@ class Resizer
     public function setVerbose(?bool $verbose = true): static
     {
         $this->verbose = $verbose;
+        return $this;
+    }
+
+    public function setBypassAll(bool $bypass): static
+    {
+        $this->bypass = $bypass;
         return $this;
     }
 
@@ -181,13 +191,13 @@ class Resizer
         return $this;
     }
 
-    public function setMaxFileSizeInMb(null|float|int $maxSizeInMb = 2): static
+    public function setMaxFileSizeInMb(float|int $maxSizeInMb): static
     {
         $this->maxSizeInMb = $maxSizeInMb;
         return $this;
     }
 
-    public function setMaxWidth(?int $maxWidth = 2800): static
+    public function setMaxWidth(int $maxWidth): static
     {
         $this->maxWidth = $maxWidth;
         return $this;
@@ -199,43 +209,55 @@ class Resizer
         return $this;
     }
 
-    public function setQuality(?float $quality = 0.77): static
+    public function setQuality(float $quality): static
     {
         $this->quality = $quality;
         return $this;
     }
 
-    public function setUseWebp(?bool $useWebp): static
+    public function setUseWebp(bool $useWebp): static
     {
         $this->useWebp = $useWebp;
         return $this;
     }
 
-    public function setKeepOriginal(?bool $keepOriginal): static
+    public function setMinWebpSize(float $minWebpSize): static
+    {
+        $this->minWebpSize = $minWebpSize;
+        return $this;
+    }
+
+    public function setKeepOriginal(bool $keepOriginal): static
     {
         $this->keepOriginal = $keepOriginal;
         return $this;
     }
 
-    public function setQualityReductionIncrement(?float $qualityReductionIncrement = 0.1): static
+    public function setQualityReductionIncrement(float $qualityReductionIncrement): static
     {
         $this->qualityReductionIncrement = $qualityReductionIncrement;
         return $this;
     }
 
+    public function setForceResampling(bool $forceResampling): static
+    {
+        $this->forceResampling = $forceResampling;
+        return $this;
+    }
 
     public function __construct()
     {
-        $this->bypass          = $this->config()->get('bypass_all');
-        $this->patternsToSkip  = $this->config()->get('patterns_to_skip');
-        $this->customFolders   = $this->config()->get('custom_folders');
+        $this->bypass = $this->config()->get('bypass_all');
+        $this->patternsToSkip = $this->config()->get('patterns_to_skip');
+        $this->customFolders = $this->config()->get('custom_folders');
         $this->customRelations = $this->config()->get('custom_relations');
-        $this->maxWidth        = $this->config()->get('max_width');
-        $this->maxHeight       = $this->config()->get('max_height');
-        $this->maxSizeInMb     = $this->config()->get('max_size_in_mb');
-        $this->quality         = $this->config()->get('default_quality');
-        $this->useWebp         = $this->config()->get('use_webp');
-        $this->keepOriginal    = $this->config()->get('keep_original');
+        $this->maxWidth = $this->config()->get('max_width');
+        $this->maxHeight = $this->config()->get('max_height');
+        $this->maxSizeInMb = $this->config()->get('max_size_in_mb');
+        $this->quality = $this->config()->get('default_quality');
+        $this->useWebp = $this->config()->get('use_webp');
+        $this->minWebpSize = $this->config()->get('min_size_in_mb_to_bother_about_webp');
+        $this->keepOriginal = $this->config()->get('keep_original');
         $this->forceResampling = $this->config()->get('force_resampling');
     }
 
@@ -251,9 +273,6 @@ class Resizer
 
     /**
      * Scale an image
-     *
-     *
-     * @return null
      */
     public function runFromDbFile(Image $file): Image
     {
@@ -272,7 +291,7 @@ class Resizer
         }
 
         $this->filePath = $this->file->getFilename();
-        if (!$this->filePath) {
+        if (! $this->filePath) {
             if ($this->verbose) {
                 echo 'ERROR: Cannot convert image with ID ' . $file->ID . ' as Filename is empty.' . PHP_EOL;
             }
@@ -321,7 +340,6 @@ class Resizer
         return $file;
     }
 
-
     protected function canBeConverted(string $filePath, string $extension): bool
     {
 
@@ -360,11 +378,8 @@ class Resizer
         }
     }
 
-
     /**
-     *
      * Allows you to add custom settings at runtime without changing the config layer
-     * @return void
      */
     protected function applyCustomFolders(?array $moreCustomValues = []): void
     {
@@ -380,16 +395,14 @@ class Resizer
         }
 
         // Apply custom folder settings if available
-        if (!empty($this->customFolders[$folder]) && is_array($this->customFolders[$folder])) {
+        if (! empty($this->customFolders[$folder]) && is_array($this->customFolders[$folder])) {
             $this->applyCustomRules($this->customFolders[$folder]);
             $this->applyCustomRules($moreCustomValues);
         }
     }
 
     /**
-     *
      * Allows you to add custom settings at runtime without changing the config layer
-     * @return void
      */
     protected function applyCustomRelations(?array $moreCustomValues = []): void
     {
@@ -397,12 +410,11 @@ class Resizer
         $folder = trim(strval(dirname((string) $filePath)), DIRECTORY_SEPARATOR);
         $customRelationKey = $this->getCustomRelationsKey();
         // Apply custom folder settings if available
-        if (!empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
+        if (! empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
             $this->applyCustomRules($this->customFolders[$customRelationKey]);
             $this->applyCustomRules($moreCustomValues);
         }
     }
-
 
     protected function applyCustomRules(array $toApply)
     {
@@ -442,11 +454,17 @@ class Resizer
         }
 
         if (!$file) {
+            if ($this->verbose) {
+                echo 'ERROR: No file found to load backend.' . PHP_EOL;
+            }
             return false;
         }
 
         $backend = $file->getImageBackend();
         if (! $backend) {
+            if ($this->verbose) {
+                echo 'ERROR: No backend found for file: ' . $file->getFilename() . PHP_EOL;
+            }
             return false;
         }
 
@@ -471,7 +489,6 @@ class Resizer
         return false;
     }
 
-
     public function needsResizing(): bool
     {
         return ($this->maxWidth && $this->file->getWidth() > $this->maxWidth)
@@ -480,12 +497,13 @@ class Resizer
 
     public function needsConvertingToWebp(): bool
     {
-        return $this->useWebp && $this->file->getExtension() !== 'webp';
+        $minSize = $this->minWebpSize * 1024 * 1024;
+        return $this->useWebp && $this->file->getExtension() !== 'webp' && $this->file->getAbsoluteSize() > $minSize;
     }
 
     public function needsCompressing(): bool
     {
-        return ($this->maxSizeInMb && $this->file->getAbsoluteSize() > $this->maxSizeInMb * 1024 * 1024);
+        return ($this->maxSizeInMb && $this->file->getAbsoluteSize() > ($this->maxSizeInMb * 1024 * 1024));
     }
 
     protected function resize(): bool
@@ -494,7 +512,7 @@ class Resizer
         // resize to max values
         if ($this->transformed && $this->needsResizing()) {
             if ($this->verbose) {
-                echo 'Resizing  to ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]') . ': ' . $this->filePath . PHP_EOL;
+                echo 'Resizing to a max of ' . ($this->maxWidth ?: '[any width]') . 'x' . ($this->maxHeight ?: '[any height]') . ': ' . $this->filePath . PHP_EOL;
             }
 
             if ($this->dryRun) {
@@ -558,18 +576,9 @@ class Resizer
 
                 $string = $this->file->getString();
                 file_put_contents($newName, $string);
-                if (!file_exists($newName)) {
+                if (! file_exists($newName)) {
                     user_error('Could not copy original file to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name, E_USER_WARNING);
                     return false;
-                }
-
-                try {
-                } catch (Exception $e) {
-                    if ($this->verbose) {
-                        echo 'ERROR: Cannot copy original file: ' . $e->getMessage() . PHP_EOL;
-                        echo 'to ' . $folder . DIRECTORY_SEPARATOR . $this->file->Name . PHP_EOL;
-                        return false;
-                    }
                 }
             }
 
@@ -593,8 +602,11 @@ class Resizer
     protected function compress(): bool
     {
         $modified = false;
+        if (empty($this->qualityReductionIncrement)) {
+            $this->qualityReductionIncrement = Config::inst()->get(static::class, 'quality_reduction_increment') ?: 0.05;
+        }
         // Check if WebP is smaller
-        if ($this->transformed && $this->needsCompressing()) {
+        if ($this->transformed && $this->needsCompressing() && $this->qualityReductionIncrement > 0) {
             if ($this->verbose) {
                 echo 'Compressing to ' . $this->maxSizeInMb . 'MB: ' . $this->filePath . PHP_EOL;
             }
@@ -621,7 +633,6 @@ class Resizer
 
         return $modified;
     }
-
 
     protected function writeToFile()
     {
@@ -664,14 +675,12 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
-
-        $isPublished = $image->isPublished()  && ! $image->isModifiedOnDraft();
+        $isPublished = $image->isPublished() && ! $image->isModifiedOnDraft();
         $image->write();
         if ($isPublished) {
             $image->publishSingle();
         }
     }
-
 
     public function getCustomRelationsKey(): ?string
     {
@@ -712,20 +721,19 @@ class Resizer
 
     public function getRelationsWithSpecialRules(): array
     {
-        if (!isset(self::$classes_with_images)) {
+        if (! isset(self::$classes_with_images)) {
             self::$classes_with_images = [];
             $all = Config::inst()->get(static::class, 'custom_relations');
             foreach (array_keys($all) as $usedByItem) {
                 $usedByItemArray = explode('.', (string) $usedByItem);
                 $usedByClass = $usedByItemArray[0] ?? '';
                 $usedByFieldOrMethod = $usedByItemArray[1] ?? '';
-                if (!$usedByClass || !class_exists($usedByClass)) {
-                    user_error('ERROR: ' . $usedByClass . ' is not a valid class');
+                if (! $usedByClass || ! class_exists($usedByClass)) {
+                    user_error('ERROR: ' . $usedByClass . ' does not have a valid class');
                     continue;
                 }
-
                 if ($usedByFieldOrMethod === '' || $usedByFieldOrMethod === '0') {
-                    user_error('ERROR: ' . $usedByClass . ' is not a valid class');
+                    user_error('ERROR: ' . $usedByClass . ' does not have a valid field or method');
                     continue;
                 }
 

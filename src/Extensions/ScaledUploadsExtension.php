@@ -2,13 +2,13 @@
 
 namespace Sunnysideup\ScaledUploads\Extensions;
 
-use Sunnysideup\ScaledUploads\Api\Resizer;
 use SilverStripe\Core\Extension;
+use Sunnysideup\ScaledUploads\Api\Resizer;
 
 /**
  * Class \Sunnysideup\ScaledUploads\Extensions\ScaledUploadsExtension
  *
- * @property Upload|ScaledUploadsExtension $owner
+ * @property ScaledUploadsExtension $owner
  */
 class ScaledUploadsExtension extends Extension
 {
@@ -16,22 +16,18 @@ class ScaledUploadsExtension extends Extension
      * Post data manipulation
      *
      * @param $file File Silverstripe file object
-     *
-     * @return null
      */
     public function onAfterLoadIntoFile($file)
     {
         // return if not an image
-        if (!$file->getIsImage()) {
+        if (! $file->getIsImage()) {
             return;
         }
 
-        $file = Resizer::create()
+        Resizer::create()
             // ->setUseWebp(false)
             // ->setKeepOriginal(true)
             // ->setMaxWidth(100)
             ->runFromDbFile($file);
     }
-
-
 }
