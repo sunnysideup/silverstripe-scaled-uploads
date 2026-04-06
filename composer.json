@@ -1,39 +1,39 @@
 {
-    "name": "sunnysideup/silverstripe-scaled-uploads",
-    "description": "Automatically scale down and rotate uploaded images for Silverstripe. This module is based on axllent's version. ",
-    "type": "silverstripe-vendormodule",
-    "homepage": "https://github.com/sunnysideup/silverstripe-scaled-uploads",
-    "keywords": [
-        "silverstripe",
-        "uploads",
-        "image",
-        "upload",
-        "scaled",
-        "rotate",
-        "files",
-        "assets",
-        "speed"
-    ],
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Ralph Slooten",
-            "homepage": "http://www.axllent.org/"
-        },
-        {
-            "name": "Nicolaas Thiemen",
-            "homepage": "http://www.sunnysideup.co.nz/"
-        }
-    ],
-    "support": {
-        "issues": "https://github.com/sunnysideup/silverstripe-scaled-uploads/issues"
+  "name": "sunnysideup/silverstripe-scaled-uploads",
+  "description": "Automatically scale down and rotate uploaded images for Silverstripe. This module is based on axllent's version. ",
+  "type": "silverstripe-vendormodule",
+  "homepage": "https://github.com/sunnysideup/silverstripe-scaled-uploads",
+  "keywords": [
+    "silverstripe",
+    "uploads",
+    "image",
+    "upload",
+    "scaled",
+    "rotate",
+    "files",
+    "assets",
+    "speed"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Ralph Slooten",
+      "homepage": "http://www.axllent.org/"
     },
-    "require": {
-        "silverstripe/framework": "^4.0 || ^5.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Sunnysideup\\ScaledUploads\\": "src/"
-        }
+    {
+      "name": "Nicolaas Thiemen",
+      "homepage": "http://www.sunnysideup.co.nz/"
     }
+  ],
+  "support": {
+    "issues": "https://github.com/sunnysideup/silverstripe-scaled-uploads/issues"
+  },
+  "require": {
+    "silverstripe/framework": "^4.0 || ^5.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Sunnysideup\\ScaledUploads\\": "src/"
+    }
+  }
 }
