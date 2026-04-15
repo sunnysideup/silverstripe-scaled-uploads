@@ -7,7 +7,6 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Environment;
 use SilverStripe\Core\Extension;
-use Intervention\Image\Exception\NotSupportedException;
 
 /**
  * Automatically scale down uploaded images
@@ -189,11 +188,11 @@ class ScaledUploads extends Extension
                 $switch_orientation = $this->exifRotation($tmp_image);
                 if ($switch_orientation) {
                     $modified = true;
+
                     // orientate() is available in Intervention Image 2.5+, but is automatic in 3+
                     try {
                         $transformed->setImageResource($transformed->getImageResource()->orientate());
-                    }
-                    catch (NotSupportedException $e) {
+                    } catch (\Throwable $e) {
                         // noop - driver/backend ondersteunt het niet
                     }
                 }
