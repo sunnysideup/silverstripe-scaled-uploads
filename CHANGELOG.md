@@ -2,6 +2,10 @@
 
 Notable changes to this project will be documented in this file.
 
+## [2.3.10]
+
+- Refactor error handling for image orientation to use Throwable
+
 ## [2.3.9]
 
 - Fix exif rotation for Silverstripe 4 & 5 (#17)
