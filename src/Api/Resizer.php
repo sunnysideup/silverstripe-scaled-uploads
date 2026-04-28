@@ -11,7 +11,6 @@ use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
-use Exception;
 use SilverStripe\ORM\DataList;
 
 class Resizer
@@ -140,7 +139,7 @@ class Resizer
 
     protected array $originalValues = [];
 
-    private const CUSTOM_VALUES_ALLOWED = [
+    private const array CUSTOM_VALUES_ALLOWED = [
         'bypass',
         'patternsToSkip',
         'customFolders',
@@ -421,7 +420,7 @@ class Resizer
         foreach ($toApply as $key => $val) {
             //snakeToCamelCase
             $key = lcfirst(str_replace('_', '', ucwords((string) $key, '_')));
-            if (!in_array($key, self::CUSTOM_VALUES_ALLOWED)) {
+            if (!in_array($key, self::CUSTOM_VALUES_ALLOWED, true)) {
                 user_error(
                     'Invalid custom folder setting: ' . $key . '.' .
                         'Allowed values are: ' . print_r(self::CUSTOM_VALUES_ALLOWED, 1),
@@ -457,6 +456,7 @@ class Resizer
             if ($this->verbose) {
                 echo 'ERROR: No file found to load backend.' . PHP_EOL;
             }
+
             return false;
         }
 
@@ -465,6 +465,7 @@ class Resizer
             if ($this->verbose) {
                 echo 'ERROR: No backend found for file: ' . $file->getFilename() . PHP_EOL;
             }
+
             return false;
         }
 
@@ -605,6 +606,7 @@ class Resizer
         if (empty($this->qualityReductionIncrement)) {
             $this->qualityReductionIncrement = Config::inst()->get(static::class, 'quality_reduction_increment') ?: 0.05;
         }
+
         // Check if WebP is smaller
         if ($this->transformed && $this->needsCompressing() && $this->qualityReductionIncrement > 0) {
             if ($this->verbose) {
@@ -675,6 +677,7 @@ class Resizer
         if ($this->dryRun) {
             return;
         }
+
         $isPublished = $image->isPublished() && ! $image->isModifiedOnDraft();
         $image->write();
         if ($isPublished) {
@@ -732,6 +735,7 @@ class Resizer
                     user_error('ERROR: ' . $usedByClass . ' does not have a valid class');
                     continue;
                 }
+
                 if ($usedByFieldOrMethod === '' || $usedByFieldOrMethod === '0') {
                     user_error('ERROR: ' . $usedByClass . ' does not have a valid field or method');
                     continue;
