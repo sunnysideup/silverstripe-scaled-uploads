@@ -472,13 +472,14 @@ class Resizer
         $this->transformed = $backend;
 
         // temporary location for image manipulation
-        $this->tmpImagePath = TEMP_FOLDER . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
+        $this->tmpImagePath = TEMP_PATH . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
 
-        $this->tmpImageContent = $this->transformed->getImageResource();
-        if ($this->tmpImageContent !== null) {
+        $resource = $this->transformed->getImageResource();
+        if ($resource !== null) {
+            // Encode the InterventionImage to raw bytes before writing
+            $encoded = $resource->encodeByExtension($file->getExtension())->toString();
 
-            // write to tmp file
-            @file_put_contents($this->tmpImagePath, $this->tmpImageContent);
+            file_put_contents($this->tmpImagePath, $encoded);
 
             $this->transformed->loadFrom($this->tmpImagePath);
 
@@ -591,7 +592,11 @@ class Resizer
                 $this->deleteOldFile();
                 $this->file->File = $tmpFile;
                 $this->filePath .= '.webp';
-                $this->file->setFromString($tmpFile->getImageBackend()->getImageResource(), $this->filePath);
+                $resource = $tmpFile->getImageBackend()->getImageResource();
+                $this->file->setFromString(
+                    $resource->encodeByExtension('webp')->toString(),
+                    $this->filePath
+                );
                 $this->saveAndPublish($this->file);
                 $this->loadBackend();
             }
