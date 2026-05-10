@@ -10,6 +10,7 @@ use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
+use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ORM\DataList;
 
@@ -472,7 +473,8 @@ class Resizer
         $this->transformed = $backend;
 
         // temporary location for image manipulation
-        $this->tmpImagePath = TEMP_PATH . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
+        $tmpPath = Environment::getEnv('TEMP_PATH') ?: TEMP_PATH;
+        $this->tmpImagePath = $tmpPath . '/resampled-' . mt_rand(100000, 999999) . '.' . $file->getExtension();
 
         $resource = $this->transformed->getImageResource();
         if ($resource !== null) {
