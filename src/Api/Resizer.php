@@ -411,7 +411,7 @@ class Resizer
         $customRelationKey = $this->getCustomRelationsKey();
         // Apply custom folder settings if available
         if (! empty($this->customRelations[$customRelationKey]) && is_array($this->customRelations[$customRelationKey])) {
-            $this->applyCustomRules($this->customFolders[$customRelationKey]);
+            $this->applyCustomRules($this->customRelations[$customRelationKey]);
             $this->applyCustomRules($moreCustomValues);
         }
     }
